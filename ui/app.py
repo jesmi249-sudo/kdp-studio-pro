@@ -158,8 +158,15 @@ class KDPStudioApp(ctk.CTk):
         btn = ctk.CTkButton(self.sidebar_frame, text="Settings", image=img, compound="left", anchor="w",
                             fg_color="transparent", text_color=("gray10", "gray90"), font=Fonts.body(),
                             command=lambda: self.select_frame("Settings"))
-        btn.grid(row=2, column=0, padx=10, pady=(10, 20), sticky="ew")
+        btn.grid(row=2, column=0, padx=10, pady=(10, 5), sticky="ew")
         self.nav_buttons["Settings"] = btn
+        
+        # AI Settings at bottom
+        ai_btn = ctk.CTkButton(self.sidebar_frame, text="AI Settings", image=img, compound="left", anchor="w",
+                            fg_color="transparent", text_color=("gray10", "gray90"), font=Fonts.body(),
+                            command=lambda: self.select_frame("AI Settings"))
+        ai_btn.grid(row=3, column=0, padx=10, pady=(5, 20), sticky="ew")
+        self.nav_buttons["AI Settings"] = ai_btn
 
     def _build_statusbar(self):
         self.statusbar = ctk.CTkFrame(self, height=30, corner_radius=0)
@@ -226,6 +233,28 @@ class KDPStudioApp(ctk.CTk):
         elif name == "Settings":
             from ui.views.settings import SettingsView
             view = SettingsView(self.main_content_frame)
+        elif name == "AI Settings":
+            from ui.views.ai_settings_view import AISettingsView
+            from book_builder.container import Container
+            from book_builder.services.ai.manager import AIManager
+            from book_builder.services.credential_service import ICredentialService, KeyringCredentialService
+            from core.config import config
+            
+            try:
+                ai_manager = Container().resolve(AIManager)
+                cred_service = Container().resolve(ICredentialService)
+            except ValueError:
+                cred_service = KeyringCredentialService()
+                ai_manager = AIManager(credential_service=cred_service)
+                ai_cfg = config.get("ai_settings", {})
+                provider = ai_cfg.get("provider", "none")
+                model = ai_cfg.get("model", "gpt-4o-mini")
+                is_enabled = ai_cfg.get("enabled", False)
+                if is_enabled:
+                    ai_manager.configure(provider, model_name=model)
+                Container().register(ICredentialService, cred_service)
+                Container().register(AIManager, ai_manager)
+            view = AISettingsView(self.main_content_frame, ai_manager, cred_service, config)
         elif name == "Planner Studio":
             from ui.views.planner_studio import PlannerStudioView
             view = PlannerStudioView(self.main_content_frame)
