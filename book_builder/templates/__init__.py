@@ -1,0 +1,3 @@
+from book_builder.templates.base import ITemplateGenerator
+from book_builder.templates.notebook import NotebookTemplateGenerator
+from book_builder.templates.coloring import ColoringTemplateGenerator

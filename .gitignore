@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+*.db
+*.sqlite
+*.sqlite3
+.vscode/
+.idea/
+build/
+dist/
+exports/
+output/
+test_output/
+
+# Generated test artwork and packages
+utils/test_real_24_page/page_*.jpg
+utils/test_real_24_page/export_pkg/
+utils/test_lilly_production/original_scene_*.jpg

@@ -1,0 +1,36 @@
+{
+    "project_id": "411d8789-a82b-41ad-abc8-b270c06fb7d6",
+    "timestamp": "2026-08-04T20:03:45.714161",
+    "data": {
+        "id": "411d8789-a82b-41ad-abc8-b270c06fb7d6",
+        "name": "Autosave Book",
+        "book_type": "Journal",
+        "metadata": {
+            "title": "",
+            "subtitle": "",
+            "author": "",
+            "publisher": "",
+            "description": "",
+            "language": "en",
+            "keywords": [],
+            "categories": [],
+            "isbn": null,
+            "imprint": null,
+            "series_name": null,
+            "series_number": null,
+            "age_range_min": null,
+            "age_range_max": null
+        },
+        "trim_width_in": 6.0,
+        "trim_height_in": 9.0,
+        "has_bleed": false,
+        "paper_type": "White",
+        "cover_finish": "Matte",
+        "pages": [],
+        "assets": [],
+        "created_at": "2026-08-04T20:03:45.595616",
+        "modified_at": "2026-08-04T20:03:45.595622",
+        "version": "1.0.0",
+        "schema_version": "8.0.0"
+    }
+}

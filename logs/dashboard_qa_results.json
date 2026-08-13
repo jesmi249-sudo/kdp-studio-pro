@@ -1,0 +1,98 @@
+{
+    "startup": true,
+    "components": {
+        "header": true,
+        "quick_actions": true,
+        "recent_projects": true,
+        "system_health": true,
+        "statistics_cards": false,
+        "notifications": false,
+        "status_indicators": true,
+        "progress_bars": false,
+        "welcome_section": true
+    },
+    "buttons": [
+        {
+            "text": "New Project",
+            "has_command": true
+        },
+        {
+            "text": "Open Project",
+            "has_command": true
+        },
+        {
+            "text": "Coloring Book Studio",
+            "has_command": true
+        },
+        {
+            "text": "Planner Studio",
+            "has_command": true
+        },
+        {
+            "text": "Story Book Studio",
+            "has_command": true
+        },
+        {
+            "text": "Activity Book Studio",
+            "has_command": true
+        },
+        {
+            "text": "Export Center",
+            "has_command": true
+        }
+    ],
+    "database": {
+        "connected": true,
+        "projects_count": 2,
+        "dashboard_recent_projects_has_db": false,
+        "tables": [
+            "projects",
+            "sqlite_sequence",
+            "assets",
+            "templates"
+        ]
+    },
+    "errors": {},
+    "code_quality": {
+        "placeholders": [
+            [
+                62,
+                "placeholder",
+                "# Placeholder for real DB integration"
+            ]
+        ]
+    },
+    "performance": {},
+    "navigation": {
+        "new": {
+            "success": true,
+            "expected": true,
+            "is_bug": false
+        },
+        "open": {
+            "success": false,
+            "expected": false,
+            "is_bug": true
+        },
+        "save": {
+            "success": false,
+            "expected": false,
+            "is_bug": false
+        },
+        "export": {
+            "success": false,
+            "expected": false,
+            "is_bug": true
+        },
+        "settings": {
+            "success": true,
+            "expected": true,
+            "is_bug": false
+        },
+        "help": {
+            "success": false,
+            "expected": false,
+            "is_bug": true
+        }
+    }
+}

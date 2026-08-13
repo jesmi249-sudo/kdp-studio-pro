@@ -1,0 +1,14 @@
+KDP STUDIO PRO - VALIDATION REPORT
+========================================
+
+SUMMARY: 0 ERRORS | 2 WARNINGS
+
+--- WARNINGS (Recommended to fix) ---
+[Project] Odd Page Count
+Message: Project has an odd number of pages (5). KDP will append a blank page, which shifts spreads.
+Action : Add a blank page to ensure even page spread layout.
+
+[Metadata] Missing Book Author
+Message: The project metadata does not specify an author name.
+Action : Set an author name to print correctly on copyright areas.
+

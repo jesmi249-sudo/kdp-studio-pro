@@ -1,0 +1,9 @@
+customtkinter
+Pillow
+reportlab
+EbookLib
+PyPDF2
+numpy
+opencv-python
+matplotlib
+pyinstaller

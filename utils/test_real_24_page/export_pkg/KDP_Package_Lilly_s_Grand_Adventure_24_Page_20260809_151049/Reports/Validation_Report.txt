@@ -1,0 +1,10 @@
+KDP STUDIO PRO - VALIDATION REPORT
+========================================
+
+SUMMARY: 0 ERRORS | 1 WARNINGS
+
+--- WARNINGS (Recommended to fix) ---
+[Metadata] Missing Book Author
+Message: The project metadata does not specify an author name.
+Action : Set an author name to print correctly on copyright areas.
+
