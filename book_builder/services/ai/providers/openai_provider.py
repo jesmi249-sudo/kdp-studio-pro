@@ -48,6 +48,8 @@ class OpenAIProvider(IAIProvider):
             raise AIProviderUnavailableError("Failed to connect to OpenAI API.")
         elif isinstance(e, openai.OpenAIError):
             raise AIError(f"OpenAI error: {str(e)}")
+        elif type(e).__name__ == "ValidationError":
+            raise AIError(f"AI response failed schema validation: {str(e)}")
         else:
             raise AIError(f"Unexpected error: {str(e)}")
 
