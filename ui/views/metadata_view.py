@@ -26,7 +26,8 @@ class MetadataView(ctk.CTkFrame):
             ("author", "Author:"),
             ("series", "Series:"),
             ("language", "Language:"),
-            ("publisher", "Publisher:")
+            ("publisher", "Publisher:"),
+            ("isbn", "ISBN:")
         ]
         
         for key, label in form_items:

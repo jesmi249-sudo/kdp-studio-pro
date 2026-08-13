@@ -7,3 +7,4 @@ numpy
 opencv-python
 matplotlib
 pyinstaller
+python-barcode==0.16.1

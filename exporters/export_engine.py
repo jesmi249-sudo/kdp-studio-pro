@@ -93,7 +93,7 @@ class ExportEngine(IExportService):
                 # Draw ISBN placeholder on page 2 (copyright page) if enabled
                 added_isbn = False
                 if idx == 1 and (profile.custom_options.get("isbn_placeholder", True) or book_project.metadata.isbn):
-                    isbn_val = book_project.metadata.isbn or "978-1-234-56789-7"
+                    isbn_val = book_project.metadata.isbn or ""
                     if not any("ISBN" in tb.get("text", "") for tb in page.text_blocks):
                         page.text_blocks.append({
                             "text": f"ISBN-13: {isbn_val}",
@@ -196,7 +196,7 @@ class ExportEngine(IExportService):
                     "y": dims["full_height_px"] - dims["safe_zone_px"] - int(1.2 * cov_gen.ppi),
                     "width": int(2.0 * cov_gen.ppi),
                     "height": int(1.2 * cov_gen.ppi),
-                    "value": book_project.metadata.isbn or "978-1-234-56789-7"
+                    "value": book_project.metadata.isbn or ""
                 })
         
         success = cov_gen.export(cover_objects, dims, bg_color, pdf_path, format="pdf")
@@ -271,7 +271,7 @@ class ExportEngine(IExportService):
                         "y": dims["full_height_px"] - dims["safe_zone_px"] - int(1.2 * cov_gen.ppi),
                         "width": int(2.0 * cov_gen.ppi),
                         "height": int(1.2 * cov_gen.ppi),
-                        "value": book_project.metadata.isbn or "978-1-234-56789-7"
+                        "value": book_project.metadata.isbn or ""
                     })
             
             # Generate cover PIL image

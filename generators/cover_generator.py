@@ -121,42 +121,36 @@ class CoverGenerator:
                         logger.error(f"Error rendering image on cover: {e}")
                         
             elif obj_type in ('barcode', 'barcode_placeholder'):
-                value = obj.get('value', '978-1-234-56789-7')
+                value = obj.get('value', '')
                 w = int(obj.get('width', 2.0 * self.ppi))
                 h = int(obj.get('height', 1.2 * self.ppi))
-                self._draw_barcode_placeholder(draw, x, y, w, h, value)
+                self._draw_barcode(draw, img, x, y, w, h, value)
 
         return img
 
-    def _draw_barcode_placeholder(self, draw, x, y, width, height, value):
-        # Draw background white box
-        draw.rectangle([x, y, x + width, y + height], fill=(255, 255, 255), outline=(128, 128, 128))
+    def _draw_barcode(self, draw, img, x, y, width, height, value):
+        from book_builder.container import Container
+        from book_builder.services.barcode_service import IBarcodeService
         
-        # Draw vertical lines for barcode
-        margin = int(width * 0.08)
-        barcode_w = width - (2 * margin)
-        line_x = x + margin
-        
-        import random
-        r = random.Random(hash(value))
-        
-        while line_x < x + width - margin:
-            line_w = r.randint(2, 5)
-            draw.rectangle([line_x, y + int(height * 0.1), line_x + line_w, y + int(height * 0.75)], fill=(0, 0, 0))
-            gap = r.randint(2, 6)
-            line_x += line_w + gap
-            
-        # Draw ISBN text at top
+        barcode_service = None
         try:
-            draw.text((x + margin, y + int(height * 0.02)), f"ISBN {value}", fill=(0, 0, 0))
-        except Exception:
-            pass
+            barcode_service = Container().resolve(IBarcodeService)
+        except Exception as e:
+            logger.warning(f"BarcodeService not registered: {e}")
             
-        # Draw value at bottom
-        try:
-            draw.text((x + margin, y + int(height * 0.78)), value.replace("-", ""), fill=(0, 0, 0))
-        except Exception:
-            pass
+        if barcode_service and value and barcode_service.is_valid_isbn13(value):
+            barcode_img = barcode_service.generate_ean13(value)
+            if barcode_img:
+                # Resize barcode to fit the target width/height
+                barcode_img = barcode_img.resize((width, height), Image.Resampling.LANCZOS)
+                # Ensure mode is compatible (convert to RGBA for pasting if needed)
+                barcode_img = barcode_img.convert("RGBA")
+                img.paste(barcode_img, (x, y), barcode_img)
+                return
+                
+        # Fallback / No ISBN: Draw a blank white rectangle of the exact size
+        # This reserves the space for KDP's auto-generated barcode and prevents cover art overlap
+        draw.rectangle([x, y, x + width, y + height], fill=(255, 255, 255), outline=(255, 255, 255))
 
     def export(self, canvas_objects, dims, background_color, path, format="pdf"):
         """

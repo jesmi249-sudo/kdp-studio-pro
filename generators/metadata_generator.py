@@ -19,7 +19,8 @@ class MetadataGenerator:
             "categories": [],
             "series": "",
             "language": "English",
-            "publisher": ""
+            "publisher": "",
+            "isbn": ""
         }
 
     def set_field(self, field: str, value):

@@ -1,216 +1,166 @@
+import os
+from typing import Any, Dict, Optional
 import customtkinter as ctk
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from core.logger import get_logger
-from core.planner_templates import PlannerTemplates
-from core.planner_engine import PlannerEngine
-from models.planner import PlannerProject
+from tkinter import messagebox
+import json
+
+from book_builder.studio_registry import StudioRegistry, StudioMetadata
+from book_builder.templates.storybook import StorybookTemplateGenerator
+from book_builder.commands.storybook_commands import GenerateStorybookPagesCommand
+from ui.views.book_builder import BookBuilderView, WorkspaceController
+from ui.theme.colors import Colors
 from ui.theme.fonts import Fonts
 from ui.theme.spacing import Spacing
-from ui.theme.colors import Colors
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-class StoryBookStudioView(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, **kwargs)
-        self.project = PlannerTemplates.create_blank_project()
-        self.active_page_idx = 0
-        self.selected_object_idx = None
-        
-        self.grid_columnconfigure(0, weight=0, minsize=200) # Left sidebar (pages)
-        self.grid_columnconfigure(1, weight=1) # Canvas
-        self.grid_columnconfigure(2, weight=0, minsize=250) # Right sidebar (Properties)
-        self.grid_rowconfigure(0, weight=1)
-        
-        self._build_left_sidebar()
-        self._build_canvas()
-        self._build_right_sidebar()
-        
-        self._refresh_canvas()
 
-    def _build_left_sidebar(self):
-        self.left_panel = ctk.CTkScrollableFrame(self, width=200)
-        self.left_panel.grid(row=0, column=0, sticky="nsew", padx=Spacing.S, pady=Spacing.S)
+class StoryBookSettingsPanel(ctk.CTkFrame):
+    """
+    Settings panel containing configuration controls for generating Storybook pages.
+    Hosted inside the PropertiesPanel of BookBuilderView.
+    """
+    def __init__(self, master: Any, controller: WorkspaceController, **kwargs) -> None:
+        super().__init__(master, fg_color="transparent", **kwargs)
+        self.controller = controller
+        self._build_ui()
+        self._load_saved_settings()
+
+    def _load_saved_settings(self) -> None:
+        project = self.controller.engine.get_active_project()
+        if not project or "storybook_data" not in project.custom_settings:
+            return
         
-        ctk.CTkLabel(self.left_panel, text="Pages", font=Fonts.heading3()).pack(pady=Spacing.M)
+        settings = project.custom_settings["storybook_data"]
+        global_settings = settings.get("global_settings", {})
         
-        # We will dynamically populate this in a real app.
-        for i, page in enumerate(self.project.pages):
-            btn = ctk.CTkButton(self.left_panel, text=f"Page {page.page_number}", 
-                                fg_color="transparent", text_color=Colors.TEXT_MAIN[1],
-                                command=lambda idx=i: self._select_page(idx))
-            btn.pack(fill="x", pady=2)
+        if "font_family" in global_settings:
+            self.font_var.set(global_settings["font_family"])
+        if "font_size" in global_settings:
+            self.size_entry.delete(0, "end")
+            self.size_entry.insert(0, str(global_settings["font_size"]))
             
-        ctk.CTkButton(self.left_panel, text="+ Add Page", fg_color=Colors.PRIMARY[0], command=self._add_page).pack(pady=Spacing.M)
+        pages_data = settings.get("pages", [])
+        self.pages_data_textbox.delete("0.0", "end")
+        self.pages_data_textbox.insert("0.0", json.dumps(pages_data, indent=2))
 
-    def _build_canvas(self):
-        canvas_container = ctk.CTkFrame(self)
-        canvas_container.grid(row=0, column=1, sticky="nsew", padx=Spacing.S, pady=Spacing.S)
-        canvas_container.grid_rowconfigure(0, weight=1)
-        canvas_container.grid_columnconfigure(0, weight=1)
+    def _build_ui(self) -> None:
+        # Title
+        ctk.CTkLabel(self, text="Storybook Layout Engine", font=Fonts.heading3()).pack(anchor="w", pady=(0, Spacing.S))
         
-        self.canvas = tk.Canvas(canvas_container, bg="gray20", highlightthickness=0)
-        self.canvas.grid(row=0, column=0, sticky="nsew")
+        # 1. Global Settings Group
+        self._add_group_header("1. Typography")
         
-        # Interactions
-        self.canvas.bind("<ButtonPress-1>", self.on_press)
+        font_frame = ctk.CTkFrame(self, fg_color="transparent")
+        font_frame.pack(fill="x", pady=(0, Spacing.S))
         
-    def _build_right_sidebar(self):
-        self.right_panel = ctk.CTkScrollableFrame(self, width=250)
-        self.right_panel.grid(row=0, column=2, sticky="nsew", padx=Spacing.S, pady=Spacing.S)
+        ctk.CTkLabel(font_frame, text="Font Family:").pack(side="left")
+        self.font_var = ctk.StringVar(value="Georgia.ttf")
+        ctk.CTkOptionMenu(font_frame, variable=self.font_var, values=["Georgia.ttf", "Arial.ttf", "Times.ttf", "Courier.ttf"], width=120).pack(side="right")
         
-        ctk.CTkLabel(self.right_panel, text="Properties", font=Fonts.heading3()).pack(pady=Spacing.M)
+        size_frame = ctk.CTkFrame(self, fg_color="transparent")
+        size_frame.pack(fill="x", pady=(0, Spacing.S))
         
-        # Coordinates
-        coord_frame = ctk.CTkFrame(self.right_panel, fg_color="transparent")
-        coord_frame.pack(fill="x", pady=Spacing.S)
+        ctk.CTkLabel(size_frame, text="Font Size (pt):").pack(side="left")
+        self.size_entry = ctk.CTkEntry(size_frame, width=60)
+        self.size_entry.pack(side="right")
+        self.size_entry.insert(0, "18.0")
         
-        ctk.CTkLabel(coord_frame, text="X:").grid(row=0, column=0, padx=2)
-        self.prop_x = ctk.CTkEntry(coord_frame, width=60)
-        self.prop_x.grid(row=0, column=1, padx=2)
+        # 2. Pages JSON Editor Group (Simulating AI data)
+        self._add_group_header("2. Story Sequence (JSON)")
         
-        ctk.CTkLabel(coord_frame, text="Y:").grid(row=0, column=2, padx=2)
-        self.prop_y = ctk.CTkEntry(coord_frame, width=60)
-        self.prop_y.grid(row=0, column=3, padx=2)
+        self.pages_data_textbox = ctk.CTkTextbox(self, height=250, font=("Consolas", 11))
+        self.pages_data_textbox.pack(fill="x", pady=(0, Spacing.S))
         
-        # Dimensions
-        dim_frame = ctk.CTkFrame(self.right_panel, fg_color="transparent")
-        dim_frame.pack(fill="x", pady=Spacing.S)
-        
-        ctk.CTkLabel(dim_frame, text="W:").grid(row=0, column=0, padx=2)
-        self.prop_w = ctk.CTkEntry(dim_frame, width=60)
-        self.prop_w.grid(row=0, column=1, padx=2)
-        
-        ctk.CTkLabel(dim_frame, text="H:").grid(row=0, column=2, padx=2)
-        self.prop_h = ctk.CTkEntry(dim_frame, width=60)
-        self.prop_h.grid(row=0, column=3, padx=2)
-        
-        # Styling
-        ctk.CTkLabel(self.right_panel, text="Text content:").pack(anchor="w", pady=(10, 0))
-        self.prop_text = ctk.CTkEntry(self.right_panel)
-        self.prop_text.pack(fill="x", pady=2)
-        
-        # Update Button
-        ctk.CTkButton(self.right_panel, text="Apply Changes", command=self._apply_properties).pack(pady=Spacing.L)
+        default_data = [
+            {
+                "layout": "title_page",
+                "title": "My Great Story",
+                "author": "Antigravity AI"
+            },
+            {
+                "layout": "image_top_text_bottom",
+                "text": "Once upon a time in a digital world...",
+                "image_path": ""
+            },
+            {
+                "layout": "text_overlay",
+                "text": "There lived an AI building a book.",
+                "image_path": ""
+            },
+            {
+                "layout": "ending_page"
+            }
+        ]
+        self.pages_data_textbox.insert("0.0", json.dumps(default_data, indent=2))
 
-    def _select_page(self, idx):
-        self.active_page_idx = idx
-        self.selected_object_idx = None
-        self._refresh_canvas()
+        # 3. Action Buttons
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=(Spacing.M, 0))
         
-    def _add_page(self):
-        from models.planner import PlannerPage
-        new_page = PlannerPage(page_number=len(self.project.pages) + 1)
-        self.project.pages.append(new_page)
-        self._build_left_sidebar() # Rebuild sidebar to show new button
-        
-    def _refresh_canvas(self):
-        self.canvas.delete("all")
-        
-        # Draw paper background
-        cx = self.canvas.winfo_width() / 2
-        cy = self.canvas.winfo_height() / 2
-        if cx <= 10: cx = 400
-        if cy <= 10: cy = 400
-        
-        # Scale (approx 100px per inch for preview)
-        w = self.project.trim_width * 100
-        h = self.project.trim_height * 100
-        
-        ox = cx - (w/2)
-        oy = cy - (h/2)
-        self.canvas_offset_x = ox
-        self.canvas_offset_y = oy
-        
-        self.canvas.create_rectangle(ox, oy, ox+w, oy+h, fill="white", outline="black")
-        
-        # Draw active page objects
-        if not self.project.pages: return
-        page = self.project.pages[self.active_page_idx]
-        
-        for i, obj in enumerate(page.objects):
-            x = ox + obj.x
-            y = oy + obj.y
-            color = "red" if i == self.selected_object_idx else "blue"
-            
-            if obj.type == "text":
-                self.canvas.create_text(x, y, text=obj.text, fill="black", font=(obj.font_family, int(obj.font_size)), anchor="nw", tags=f"obj_{i}")
-                # Highlight bounds if selected
-                if i == self.selected_object_idx:
-                    self.canvas.create_rectangle(x, y, x+obj.width, y+obj.height, outline="red", tags=f"sel_{i}")
-            else:
-                self.canvas.create_rectangle(x, y, x+obj.width, y+obj.height, outline=color, tags=f"obj_{i}")
+        ctk.CTkButton(btn_frame, text="Generate Storybook", fg_color=Colors.PRIMARY[0], hover_color=Colors.PRIMARY[1], command=self._on_generate).pack(fill="x")
 
-    def on_press(self, event):
-        item = self.canvas.find_withtag("current")
-        if item:
-            tags = self.canvas.gettags(item[0])
-            for tag in tags:
-                if tag.startswith("obj_"):
-                    self.selected_object_idx = int(tag.split("_")[1])
-                    self._populate_properties()
-                    self._refresh_canvas()
-                    return
-        
-        self.selected_object_idx = None
-        self._refresh_canvas()
+    def _add_group_header(self, text: str) -> None:
+        ctk.CTkLabel(self, text=text, font=Fonts.ui_bold(), text_color=Colors.TEXT_MAIN[1]).pack(anchor="w", pady=(Spacing.M, Spacing.XS))
+        ctk.CTkFrame(self, height=1, fg_color=Colors.BORDER).pack(fill="x", pady=(0, Spacing.S))
 
-    def _populate_properties(self):
-        if self.selected_object_idx is None: return
-        page = self.project.pages[self.active_page_idx]
-        obj = page.objects[self.selected_object_idx]
-        
-        self.prop_x.delete(0, 'end')
-        self.prop_x.insert(0, str(obj.x))
-        
-        self.prop_y.delete(0, 'end')
-        self.prop_y.insert(0, str(obj.y))
-        
-        self.prop_w.delete(0, 'end')
-        self.prop_w.insert(0, str(obj.width))
-        
-        self.prop_h.delete(0, 'end')
-        self.prop_h.insert(0, str(obj.height))
-        
-        self.prop_text.delete(0, 'end')
-        self.prop_text.insert(0, obj.text)
+    def _on_generate(self) -> None:
+        project = self.controller.engine.get_active_project()
+        if not project:
+            messagebox.showwarning("No Project", "No active project found.")
+            return
 
-    def _apply_properties(self):
-        if self.selected_object_idx is None: return
-        page = self.project.pages[self.active_page_idx]
-        obj = page.objects[self.selected_object_idx]
-        
+        # Parse JSON
         try:
-            obj.x = float(self.prop_x.get())
-            obj.y = float(self.prop_y.get())
-            obj.width = float(self.prop_w.get())
-            obj.height = float(self.prop_h.get())
-            obj.text = self.prop_text.get()
-            self._refresh_canvas()
+            pages_data = json.loads(self.pages_data_textbox.get("0.0", "end").strip())
+            if not isinstance(pages_data, list):
+                raise ValueError("Story sequence must be a JSON array.")
+        except json.JSONDecodeError as e:
+            messagebox.showerror("Invalid JSON", f"Could not parse story sequence:\n\n{e}")
+            return
+        except ValueError as e:
+            messagebox.showerror("Invalid Data", str(e))
+            return
+
+        try:
+            font_size = float(self.size_entry.get())
         except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter valid numbers for coordinates.")
+            messagebox.showerror("Invalid Size", "Please enter a valid numeric font size.")
+            return
 
-    # --- Toolbar Commands (via Dispatcher) ---
-    def cmd_save(self):
-        messagebox.showinfo("Save", "Planner project saved successfully.")
-        
-    def cmd_export(self):
-        path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
-        if path:
-            success = PlannerEngine.export_pdf(self.project, path)
-            if success:
-                messagebox.showinfo("Export", "Planner PDF generated successfully!")
-            else:
-                messagebox.showerror("Error", "Failed to generate PDF.")
+        global_settings = {
+            "font_family": self.font_var.get(),
+            "font_size": font_size
+        }
 
-    def load_project(self, project_id, project_name, state):
-        self.project_id = project_id
-        if "pages" not in state or not state["pages"]:
-            self.project = PlannerTemplates.create_blank_project()
-        else:
-            self.project = PlannerProject.from_dict(state, project_id)
-        
-        self.project.name = project_name
-        self._build_left_sidebar()
-        self._select_page(0)
+        # Save to custom_settings
+        project.custom_settings["storybook_data"] = {
+            "global_settings": global_settings,
+            "pages": pages_data
+        }
+
+        # Execute Command
+        cmd = GenerateStorybookPagesCommand(project)
+        self.controller.engine.execute_command(cmd)
+
+
+class StoryBookStudioView(BookBuilderView):
+    """
+    Subclass wrapper of BookBuilderView that acts as the entrypoint for KDP Wizard Story Book routing.
+    Inherits all workspaces widgets (toolbar, canvas, thumbnails, assets) natively.
+    """
+    def __init__(self, master, **kwargs) -> None:
+        super().__init__(master, **kwargs)
+        logger.info("StoryBookStudioView: initialized wrapper workspace frame.")
+
+
+# Self-register in StudioRegistry on import
+StudioRegistry().register_studio(
+    "Story Book",
+    StudioMetadata(
+        name="Story Book Studio",
+        settings_panel_class=StoryBookSettingsPanel,
+        template_generator_class=StorybookTemplateGenerator
+    )
+)

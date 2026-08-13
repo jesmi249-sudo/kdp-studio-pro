@@ -78,26 +78,77 @@ class RenderContext:
         inverted_y = self.height_pt - y_pt - h_pt
         return self.pt_to_px(inverted_y)
 
-    def draw_text(self, text: str, x_pt: float, y_pt: float, w_pt: float, h_pt: float, font_size_pt: float = 9.0, color: str = "black") -> None:
+    def draw_text(self, text: str, x_pt: float, y_pt: float, w_pt: float, h_pt: float, font_size_pt: float = 9.0, color: str = "black", alignment: str = "left", font_name: str = "arial.ttf") -> None:
         x = self.pt_to_px(x_pt)
         # Approximate baseline offset or just direct translation
         y = self.map_y(y_pt, h_pt)
+        w_px = self.pt_to_px(w_pt)
         
         # Try loading true type fonts or fallback
         try:
             from PIL import ImageFont
-            font = ImageFont.truetype("arial.ttf", self.pt_to_px(font_size_pt))
+            # Only use font_name if it is a .ttf or .otf, else fallback
+            font = ImageFont.truetype(font_name if font_name.endswith('.ttf') else "arial.ttf", self.pt_to_px(font_size_pt))
         except IOError:
             # Fallback PIL font loading
             font = ImageFont.load_default()
         except Exception:
             font = None
             
-        self.draw.text((x, y), text, fill=color, font=font)
+        # Implement text wrapping
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        for word in words:
+            current_line.append(word)
+            test_line = ' '.join(current_line)
+            # Use getlength if available, else fallback to textlength
+            if font and hasattr(font, 'getlength'):
+                w = font.getlength(test_line)
+            elif font and hasattr(font, 'getsize'):
+                w = font.getsize(test_line)[0]
+            elif hasattr(self.draw, 'textlength'):
+                w = self.draw.textlength(test_line, font=font)
+            else:
+                w = len(test_line) * self.pt_to_px(font_size_pt) * 0.5 # rough approx
+                
+            if w > w_px and len(current_line) > 1:
+                current_line.pop()
+                lines.append(' '.join(current_line))
+                current_line = [word]
+        if current_line:
+            lines.append(' '.join(current_line))
+            
+        # Draw lines with alignment
+        current_y = y
+        line_height_pt = font_size_pt * 1.2
+        line_height_px = self.pt_to_px(line_height_pt)
+        
+        for line in lines:
+            if font and hasattr(font, 'getlength'):
+                line_w = font.getlength(line)
+            elif font and hasattr(font, 'getsize'):
+                line_w = font.getsize(line)[0]
+            elif hasattr(self.draw, 'textlength'):
+                line_w = self.draw.textlength(line, font=font)
+            else:
+                line_w = len(line) * self.pt_to_px(font_size_pt) * 0.5
+                
+            if alignment == "center":
+                line_x = x + (w_px - line_w) / 2
+            elif alignment == "right":
+                line_x = x + w_px - line_w
+            else:
+                line_x = x
+                
+            self.draw.text((line_x, current_y), line, fill=color, font=font)
+            current_y += line_height_px
 
     def draw_shape(self, shape_type: str, x_pt: float, y_pt: float, w_pt: float, h_pt: float, fill_color: Optional[str] = None, stroke_color: str = "black", stroke_width_pt: float = 1.0) -> None:
         if fill_color == "none":
             fill_color = None
+        if stroke_color == "none":
+            stroke_color = None
             
         x0 = self.pt_to_px(x_pt)
         y0 = self.map_y(y_pt, h_pt)
@@ -157,7 +208,9 @@ class PageRenderer(IRenderer):
                     w_pt=geom.get("width", 100.0),
                     h_pt=geom.get("height", 20.0),
                     font_size_pt=props.get("font_size", 9.0),
-                    color=props.get("color", "black")
+                    color=props.get("color", "black"),
+                    alignment=props.get("alignment", "left"),
+                    font_name=props.get("font_name", "arial.ttf")
                 )
             else:
                 canvas_context.draw_shape(
@@ -193,7 +246,9 @@ class PageRenderer(IRenderer):
                 w_pt=geom.get("width", 100.0),
                 h_pt=geom.get("height", 20.0),
                 font_size_pt=props.get("font_size", 10.0),
-                color=props.get("color", "black")
+                color=props.get("color", "black"),
+                alignment=props.get("alignment", "left"),
+                font_name=props.get("font_name", "arial.ttf")
             )
 
     def render_document(self, book_project: BookProject, output_path: str) -> bool:
