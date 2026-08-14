@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 ASSETS_BASE_DIR = "assets_library"
 CATEGORIES = [
     "Characters", "Poses", "Expressions", "Outfits", 
-    "Backgrounds", "Decorations", "Scenes", "Coloring Artwork"
+    "Backgrounds", "Decorations", "Scenes", "Coloring Artwork", "Storybook Illustrations"
 ]
 
 class AssetManager:

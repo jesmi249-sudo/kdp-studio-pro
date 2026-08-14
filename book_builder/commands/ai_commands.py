@@ -56,6 +56,11 @@ class ApplyBookSpecificationCommand(Command):
                 "layout": layout,
                 "text": page_spec.text_content or "",
             }
+            if page_spec.image_prompt:
+                p_dict["image_prompt"] = page_spec.image_prompt
+            if page_spec.image_reference:
+                p_dict["image_reference"] = page_spec.image_reference.model_dump()
+                
             pages_data.append(p_dict)
             
         storybook_data = self.project.custom_settings.get("storybook_data", {})

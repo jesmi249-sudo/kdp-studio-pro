@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any, Literal
+from datetime import datetime
 
 # Supported Enums / Literals
 BookType = Literal["storybook", "coloring", "activity", "planner", "notebook"]
@@ -7,12 +8,23 @@ PageType = Literal["title", "copyright", "body", "end"]
 LayoutType = Literal["image_top", "text_bottom", "full_bleed_image", "text_only", "image_only", "split", "activity"]
 ActivityType = Literal["maze", "word_search", "sudoku", "crossword", "dot_to_dot", "tracing", "matching", "none"]
 
+class GeneratedImageReference(BaseModel):
+    asset_id: Optional[int] = Field(None, description="The AssetManager ID once saved locally.")
+    image_path: Optional[str] = Field(None, description="The local file path after generation.")
+    image_prompt: str = Field(..., description="The prompt used or to be used for generation.")
+    provider: Optional[str] = Field(None, description="The provider used (e.g. 'openai').")
+    model: Optional[str] = Field(None, description="The model used (e.g. 'dall-e-3').")
+    status: str = Field("pending", description="Lifecycle state: pending, generating, generated, validating, ready, failed")
+    creation_timestamp: Optional[datetime] = Field(None, description="When the asset was generated.")
+    generation_history: List[int] = Field(default_factory=list, description="List of previous asset_ids if regenerated.")
+
 class PageSpecification(BaseModel):
     page_number: int = Field(..., description="The sequential page number, 1-indexed.")
     page_type: PageType = Field(..., description="The type of the page.")
     layout_type: LayoutType = Field(..., description="The layout configuration for this page.")
     text_content: Optional[str] = Field(None, description="The primary text content to appear on the page.")
     image_prompt: Optional[str] = Field(None, description="A detailed visual description for future AI image generation.")
+    image_reference: Optional[GeneratedImageReference] = Field(None, description="The state and metadata of the generated image.")
     activity_type: ActivityType = Field("none", description="The type of activity if this is an activity page.")
     activity_metadata: Optional[Dict[str, Any]] = Field(None, description="Specific parameters for the activity (e.g. difficulty, word list).")
     instructions: Optional[str] = Field(None, description="Instructions to be printed on the page for the activity/coloring.")
