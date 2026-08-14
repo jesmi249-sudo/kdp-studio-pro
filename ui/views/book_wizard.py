@@ -31,9 +31,10 @@ class Step2_BookDetails(ctk.CTkFrame):
         form_frame.pack(pady=10, padx=40, fill="x")
         
         self.entries = {}
-        fields = ["Project Name", "Trim Size", "Page Count", "Paper Type", "Bleed"]
         
-        for i, field in enumerate(fields):
+        # Basic Fields
+        basic_fields = ["Project Name", "Trim Size", "Page Count"]
+        for i, field in enumerate(basic_fields):
             ctk.CTkLabel(form_frame, text=field).grid(row=i, column=0, padx=10, pady=10, sticky="e")
             entry = ctk.CTkEntry(form_frame, width=300)
             entry.grid(row=i, column=1, padx=10, pady=10, sticky="w")
@@ -42,6 +43,31 @@ class Step2_BookDetails(ctk.CTkFrame):
             if state_key in self.controller.state:
                 entry.insert(0, str(self.controller.state[state_key]))
             self.entries[state_key] = entry
+
+        # Advanced Settings Toggle
+        self.show_advanced = ctk.BooleanVar(value=False)
+        self.adv_btn = ctk.CTkSwitch(self, text="Show Advanced Settings", variable=self.show_advanced, command=self.toggle_advanced)
+        self.adv_btn.pack(pady=(20, 10))
+        
+        # Advanced Fields Frame
+        self.adv_frame = ctk.CTkFrame(self, fg_color="transparent")
+        
+        adv_fields = ["Paper Type", "Bleed"]
+        for i, field in enumerate(adv_fields):
+            ctk.CTkLabel(self.adv_frame, text=field).grid(row=i, column=0, padx=10, pady=10, sticky="e")
+            entry = ctk.CTkEntry(self.adv_frame, width=300)
+            entry.grid(row=i, column=1, padx=10, pady=10, sticky="w")
+            
+            state_key = field.lower().replace(" ", "_")
+            if state_key in self.controller.state:
+                entry.insert(0, str(self.controller.state[state_key]))
+            self.entries[state_key] = entry
+            
+    def toggle_advanced(self):
+        if self.show_advanced.get():
+            self.adv_frame.pack(pady=10, padx=40, fill="x")
+        else:
+            self.adv_frame.pack_forget()
             
     def save_state(self):
         for k, entry in self.entries.items():

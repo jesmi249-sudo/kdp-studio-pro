@@ -113,32 +113,28 @@ class KDPStudioApp(ctk.CTk):
         self.menu_scroll.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
         
         menu_groups = [
-            ("CORE", [
+            ("MY BOOKS", [
                 ("Dashboard", "dashboard.png"),
                 ("Projects", "projects.png"),
             ]),
-            ("PLANNING", [
-                ("Templates & Assets", "assets.png"),
-                ("Book Scene Planner", "projects.png"),
-                ("Metadata", "metadata.png"),
+            ("CURRENT BOOK", [
+                ("Book Workspace", "projects.png"),
             ]),
-            ("PRODUCTION", [
-                ("Production Pipeline", "dashboard.png"),
-                ("Export Center", "export.png"),
-                ("KDP Compliance", "compliance.png"),
-            ]),
-            ("STUDIOS", [
-                ("Book Builder", "projects.png"),
+            ("ADVANCED TOOLS", [
                 ("Coloring Book Studio", "coloring.png"),
                 ("Planner Studio", "planner.png"),
                 ("Story Book Studio", "storybook.png"),
                 ("Activity Book Studio", "activity.png"),
+                ("Notebook Studio", "projects.png"),
+                ("Journal Studio", "projects.png"),
                 ("Cover Designer Pro", "cover.png"),
                 ("Interior Designer", "interior.png"),
-            ]),
-            ("ADVANCED TOOLS", [
                 ("Scene Builder", "metadata.png"),
                 ("Prompt Generator", "metadata.png"),
+                ("Templates & Assets", "assets.png"),
+                ("Metadata", "metadata.png"),
+                ("Export Center", "export.png"),
+                ("KDP Compliance", "compliance.png"),
             ])
         ]
         
@@ -270,6 +266,9 @@ class KDPStudioApp(ctk.CTk):
         elif name == "Activity Book Studio":
             from ui.views.activity_studio import ActivityBookStudioView
             view = ActivityBookStudioView(self.main_content_frame)
+        elif name == "Book Workspace":
+            from ui.views.book_workspace import BookWorkspaceView
+            view = BookWorkspaceView(self.main_content_frame)
         else:
             view = ctk.CTkFrame(self.main_content_frame)
             
@@ -420,34 +419,10 @@ class KDPStudioApp(ctk.CTk):
                     messagebox.showerror("Error", "Cover Designer view is not ready or missing load_project.")
                 return
 
-            # Determine the studio name based on project type or wizard book type
-            studio_type = p_type
-            if p_type == 'wizard':
-                studio_type = state.get('type', 'Coloring Book')
-
-            mapping = {
-                "notebook": "Notebook Studio",
-                "journal": "Journal Studio",
-                "planner": "Planner Studio",
-                "story book": "Story Book Studio",
-                "storybook": "Story Book Studio",
-                "activity book": "Activity Book Studio",
-                "activity": "Activity Book Studio",
-                "coloring book": "Coloring Book Studio",
-                "coloring": "Coloring Book Studio",
-                "book": "Book Builder"
-            }
-
-            target_studio = None
-            if studio_type:
-                target_studio = mapping.get(studio_type.lower())
-
-            # Fallback
-            if not target_studio and p_type == 'book':
-                target_studio = "Book Builder"
-            elif not target_studio and p_type == 'planner':
-                target_studio = "Planner Studio"
-
+            # Always route standard projects to Book Workspace
+            if p_type in ['book', 'wizard', 'notebook', 'journal', 'planner', 'storybook', 'story book', 'activity book', 'activity', 'coloring book', 'coloring']:
+                target_studio = "Book Workspace"
+            
             if target_studio:
                 self.select_frame(target_studio)
                 view = self.views.get(target_studio)
