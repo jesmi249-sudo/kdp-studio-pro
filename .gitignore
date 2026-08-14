@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.log
 .env
+.cache/
 *.db
 *.sqlite
 *.sqlite3
