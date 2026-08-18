@@ -121,20 +121,9 @@ class KDPStudioApp(ctk.CTk):
                 ("Book Workspace", "projects.png"),
             ]),
             ("ADVANCED TOOLS", [
-                ("Coloring Book Studio", "coloring.png"),
-                ("Planner Studio", "planner.png"),
-                ("Story Book Studio", "storybook.png"),
-                ("Activity Book Studio", "activity.png"),
-                ("Notebook Studio", "projects.png"),
-                ("Journal Studio", "projects.png"),
                 ("Cover Designer Pro", "cover.png"),
-                ("Interior Designer", "interior.png"),
-                ("Scene Builder", "metadata.png"),
-                ("Prompt Generator", "metadata.png"),
                 ("Templates & Assets", "assets.png"),
-                ("Metadata", "metadata.png"),
-                ("Export Center", "export.png"),
-                ("KDP Compliance", "compliance.png"),
+                ("Legacy Studios", "metadata.png"),
             ])
         ]
         
@@ -224,8 +213,11 @@ class KDPStudioApp(ctk.CTk):
             from ui.views.export_center import ExportCenterView
             view = ExportCenterView(self.main_content_frame)
         elif name == "KDP Compliance":
-            from ui.views.compliance_view import ComplianceView
-            view = ComplianceView(self.main_content_frame)
+            from ui.views.kdp_compliance import KDPComplianceView
+            view = KDPComplianceView(self.main_content_frame)
+        elif name == "Legacy Studios":
+            from ui.views.advanced_tools import AdvancedToolsView
+            view = AdvancedToolsView(self.main_content_frame)
         elif name == "Settings":
             from ui.views.settings import SettingsView
             view = SettingsView(self.main_content_frame)

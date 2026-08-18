@@ -3,64 +3,64 @@
     "default_export_path": "C:\\Users\\sys\\Documents\\KDP_Projects",
     "recent_projects": [
         {
-            "id": "132",
-            "name": "Project A",
+            "id": "013d2d3b-befd-4954-a18a-0bab508fb3bc",
+            "name": "Recovered Book",
             "book_type": "Coloring Book",
-            "last_opened": "2026-08-11T07:53:29.232720+00:00"
+            "last_opened": "2026-08-15T11:40:40.459593+00:00"
         },
         {
-            "id": "133",
-            "name": "Project B",
+            "id": "81d1dcdf-cacf-429a-a9e5-b79dc6fc465c",
+            "name": "Database Saved Book",
             "book_type": "Coloring Book",
-            "last_opened": "2026-08-11T07:53:29.226991+00:00"
+            "last_opened": "2026-08-15T11:40:40.445882+00:00"
         },
         {
-            "id": "036860d4-799e-468f-9cca-b742d86c0f80",
-            "name": "Project B",
-            "book_type": "Coloring Book",
-            "last_opened": "2026-08-11T07:53:29.084891+00:00"
+            "id": "80069aa0-2673-454d-be35-e461812ebbdf",
+            "name": "My low-content planner",
+            "book_type": "Planner",
+            "last_opened": "2026-08-15T11:40:19.858801+00:00"
         },
         {
-            "id": "513b8599-1edf-4bd4-b966-6e66f3159b85",
-            "name": "Project A",
-            "book_type": "Coloring Book",
-            "last_opened": "2026-08-11T07:53:28.679303+00:00"
+            "id": "a3217f74-2928-4bcb-aa87-ef00070c66af",
+            "name": "My low-content planner",
+            "book_type": "Planner",
+            "last_opened": "2026-08-15T11:40:19.199818+00:00"
         },
         {
-            "id": "130",
-            "name": "Project A",
-            "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:20:12.158401"
+            "id": "c5896de9-1283-4be3-b166-abd8bc39e5a2",
+            "name": "My Notebook",
+            "book_type": "Notebook",
+            "last_opened": "2026-08-15T11:40:14.695402+00:00"
         },
         {
-            "id": "131",
-            "name": "Project B",
-            "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:20:11.732332"
+            "id": "3ad7e9fa-5850-4288-85bd-d32ef5079d2d",
+            "name": "My Empty Notebook",
+            "book_type": "Notebook",
+            "last_opened": "2026-08-15T11:40:13.608941+00:00"
         },
         {
-            "id": "2b9c847a-aaa9-4222-8e69-69d4eb471d4c",
-            "name": "Project B",
+            "id": "144",
+            "name": "Persistence Book",
             "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:20:08.865295"
+            "last_opened": "2026-08-15T11:40:11.300477+00:00"
         },
         {
-            "id": "0f59dc16-9550-4d5c-88a5-e16cc6f8495c",
-            "name": "Project A",
+            "id": "e8cc4ff4-b165-4b62-9046-94025eaba3ec",
+            "name": "Persistence Book",
             "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:20:08.668345"
+            "last_opened": "2026-08-15T11:40:11.092371+00:00"
         },
         {
-            "id": "128",
-            "name": "Project A",
-            "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:19:16.413108"
+            "id": "8a4d0d85-9610-401e-9c21-4c5c072a56e6",
+            "name": "Recent Book",
+            "book_type": "Notebook",
+            "last_opened": "2026-08-15T11:40:11.080439+00:00"
         },
         {
-            "id": "129",
-            "name": "Project B",
+            "id": "c0dd98cc-6670-46ca-a3ea-f0f87c1969ae",
+            "name": "Coloring Novel",
             "book_type": "Coloring Book",
-            "last_opened": "2026-08-09T10:19:16.400062"
+            "last_opened": "2026-08-15T11:40:11.066108+00:00"
         }
     ]
 }

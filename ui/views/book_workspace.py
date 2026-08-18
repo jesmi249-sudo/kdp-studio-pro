@@ -176,13 +176,16 @@ class BookWorkspaceView(ctk.CTkFrame):
         self.btn_plan = ctk.CTkButton(form, text="✨ Create Plan", command=self._generate_ai_plan)
         self.btn_plan.pack(anchor="w", padx=20, pady=(0, 20))
         
-        self.plan_result_frame = ctk.CTkScrollableFrame(f)
+        self.plan_result_frame = ctk.CTkScrollableFrame(f, fg_color="transparent")
         self.plan_result_frame.pack(fill="both", expand=True, pady=10)
         
         # Load existing plan if present
         project = self.engine.get_active_project()
         if project and "ai_plan" in project.custom_settings:
             self._display_ai_plan(project.custom_settings["ai_plan"])
+        else:
+            self._empty_plan_label = ctk.CTkLabel(self.plan_result_frame, text="No AI Plan generated yet. Set up your book details and click 'Create Plan'.", text_color="gray", font=Fonts.body())
+            self._empty_plan_label.pack(pady=40)
             
     def _generate_ai_plan(self):
         prompt = self.ai_prompt.get().strip()
@@ -204,8 +207,9 @@ class BookWorkspaceView(ctk.CTkFrame):
                 spec = planner.generate_book_plan(prompt, book_type=b_type, page_count=count)
                 self.after(0, self._on_ai_plan_success, spec)
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("AI Error", str(e)))
-                self.after(0, lambda: self.btn_plan.configure(state="normal", text="✨ Create Plan"))
+                self.btn_plan.configure(state="normal", text="✨ Create Plan")
+                messagebox.showerror("AI Generation Failed", f"Failed to generate AI plan.\nPlease check your connection or AI settings.\n\nDetails: {e}")
+                logger.error(f"AI Plan generation error: {e}")
                 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -263,12 +267,13 @@ class BookWorkspaceView(ctk.CTkFrame):
         scroll.pack(fill="both", expand=True)
         
         project = self.engine.get_active_project()
-        if not project or "storybook_data" not in project.custom_settings:
-            ctk.CTkLabel(scroll, text="No content available. Generate an AI Plan first.").pack(pady=20)
+        pages_data = project.custom_settings.get("storybook_data", {}).get("pages", []) if project else []
+        
+        if not pages_data:
+            ctk.CTkLabel(scroll, text="No content yet. Please generate an AI Plan first to populate your book's pages.", text_color="gray", font=Fonts.body()).pack(pady=40)
             return
             
-        pages = project.custom_settings["storybook_data"].get("pages", [])
-        for i, p in enumerate(pages):
+        for i, p in enumerate(pages_data):
             card = ctk.CTkFrame(scroll, fg_color=Colors.BG_CARD)
             card.pack(fill="x", pady=5, padx=10)
             
@@ -295,7 +300,7 @@ class BookWorkspaceView(ctk.CTkFrame):
         
         project = self.engine.get_active_project()
         if not project or not project.pages:
-            ctk.CTkLabel(self.images_scroll, text="No pages available. Generate content first.").pack(pady=50)
+            ctk.CTkLabel(self.images_scroll, text="No pages available. Generate content first.", text_color="gray").pack(pady=50)
             return
             
         for i, page in enumerate(project.pages):
@@ -482,7 +487,7 @@ class BookWorkspaceView(ctk.CTkFrame):
         self.preview_canvas_frame = ctk.CTkScrollableFrame(main_pane, fg_color=Colors.BG_SIDEBAR)
         self.preview_canvas_frame.pack(side="left", fill="both", expand=True)
         
-        self.preview_image_label = ctk.CTkLabel(self.preview_canvas_frame, text="")
+        self.preview_image_label = ctk.CTkLabel(self.preview_canvas_frame, text="Complete your content and layout before previewing.\nClick 'Refresh Preview' to load.", text_color="gray", font=Fonts.body())
         self.preview_image_label.pack(expand=True, pady=20)
         
         # Bottom controls
@@ -570,8 +575,8 @@ class BookWorkspaceView(ctk.CTkFrame):
                 
                 self.after(0, lambda: self._update_preview_canvas(ctk_img, display_text))
             except Exception as e:
-                logger.error(f"Preview render failed: {e}")
-                self.after(0, lambda: self.preview_image_label.configure(text="Render Error"))
+                logger.error(f"Preview render error: {e}")
+                self.after(0, lambda: self.preview_image_label.configure(text=f"Render Error: {e}"))
                 
         threading.Thread(target=render_worker, daemon=True).start()
         self._refresh_thumbnails()
@@ -642,7 +647,10 @@ class BookWorkspaceView(ctk.CTkFrame):
         self.qa_btn.pack(side="right")
         
         self.qa_results_frame = ctk.CTkScrollableFrame(f, fg_color="transparent")
-        self.qa_results_frame.pack(fill="both", expand=True, padx=20)
+        self.qa_results_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        self.qa_results_label = ctk.CTkLabel(self.qa_results_frame, text="Add your pages to run the final KDP validation.\nClick 'Run Inspection' when ready.", text_color="gray", font=Fonts.body())
+        self.qa_results_label.pack(pady=40)
         
         ctk.CTkLabel(self.qa_results_frame, text="Click 'Run Inspection' to verify your book.", font=Fonts.body()).pack(pady=50)
 

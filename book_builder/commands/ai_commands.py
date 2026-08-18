@@ -15,8 +15,7 @@ class ApplyBookSpecificationCommand(Command):
     converts it into the format expected by the existing generators,
     and delegates to them.
     
-    Currently supports mapping "storybook" specifications to 
-    GenerateStorybookPagesCommand without duplicating rendering math.
+    It delegates to the correct book type adapter via the get_adapter factory.
     """
     def __init__(self, project: BookProject, spec: BookSpecification) -> None:
         self.project = project
@@ -30,58 +29,24 @@ class ApplyBookSpecificationCommand(Command):
             # Update basic project settings that came from the AI plan
             self.project.name = self.spec.title
             
-            # Save the raw plan for future editing (Human in the loop / Persistence)
+            # Save the raw plan for future editing
             self.project.custom_settings['ai_plan'] = self.spec.model_dump()
             
-            # Map BookSpecification to the legacy dictionary format based on book_type
-            if self.spec.book_type == "storybook":
-                return self._apply_storybook()
-            else:
-                logger.error(f"Book type '{self.spec.book_type}' is not yet supported by the adapter.")
-                return False
+            from book_builder.adapters import get_adapter
+            adapter = get_adapter(self.spec.book_type)
+            self.delegate_command = adapter.convert_spec(self.project, self.spec)
+            
+            success = self.delegate_command.execute()
+            if success:
+                self.event_bus.publish(
+                    Event("PROJECT_MODIFIED", "ApplyBookSpecificationCommand", {"project_id": str(self.project.id)})
+                )
+            return success
                 
         except Exception as e:
             logger.error(f"ApplyBookSpecificationCommand: execution failed: {e}")
             return False
 
-    def _apply_storybook(self) -> bool:
-        """Adapts the AI spec to the format required by StorybookTemplateGenerator."""
-        pages_data = []
-        for page_spec in self.spec.pages:
-            # Map layout strings to what the generator understands
-            layout = page_spec.layout_type
-            
-            # Build the dict expected by GenerateStorybookPagesCommand
-            p_dict = {
-                "layout": layout,
-                "text": page_spec.text_content or "",
-            }
-            if page_spec.image_prompt:
-                p_dict["image_prompt"] = page_spec.image_prompt
-            if page_spec.image_reference:
-                p_dict["image_reference"] = page_spec.image_reference.model_dump()
-                
-            pages_data.append(p_dict)
-            
-        storybook_data = self.project.custom_settings.get("storybook_data", {})
-        storybook_data["pages"] = pages_data
-        
-        # We can also store global style instructions if the UI/generator needs it later
-        if "global_settings" not in storybook_data:
-            storybook_data["global_settings"] = {}
-        storybook_data["global_settings"]["style_prompt"] = self.spec.global_style_instructions
-        
-        self.project.custom_settings["storybook_data"] = storybook_data
-        
-        # Delegate to the deterministic generator
-        self.delegate_command = GenerateStorybookPagesCommand(self.project)
-        success = self.delegate_command.execute()
-        
-        if success:
-            self.event_bus.publish(
-                Event("PROJECT_MODIFIED", "ApplyBookSpecificationCommand", {"project_id": str(self.project.id)})
-            )
-        return success
 
     def undo(self) -> bool:
         if self.delegate_command:
