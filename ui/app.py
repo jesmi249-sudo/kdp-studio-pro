@@ -411,8 +411,9 @@ class KDPStudioApp(ctk.CTk):
                     messagebox.showerror("Error", "Cover Designer view is not ready or missing load_project.")
                 return
 
+            target_studio = None
             # Always route standard projects to Book Workspace
-            if p_type in ['book', 'wizard', 'notebook', 'journal', 'planner', 'storybook', 'story book', 'activity book', 'activity', 'coloring book', 'coloring']:
+            if p_type and p_type.lower() in ['book', 'wizard', 'notebook', 'journal', 'planner', 'storybook', 'story book', 'activity book', 'activity', 'coloring book', 'coloring']:
                 target_studio = "Book Workspace"
             
             if target_studio:

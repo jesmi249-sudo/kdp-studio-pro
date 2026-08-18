@@ -5,7 +5,15 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 DB_DIR = "database"
-DB_FILE = os.path.join(DB_DIR, "kdp_studio.db")
+import sys
+is_test = os.environ.get("KDP_TEST_MODE") == "1"
+if not is_test and any('pytest' in arg or 'unittest' in arg or arg.endswith('test.py') or 'test_' in arg for arg in sys.argv):
+    is_test = True
+
+if is_test:
+    DB_FILE = ":memory:"
+else:
+    DB_FILE = os.path.join(DB_DIR, "kdp_studio.db")
 
 class Database:
     def __init__(self):
