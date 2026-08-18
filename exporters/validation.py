@@ -301,7 +301,7 @@ class KDPValidator(IComplianceService):
             
         return issues
 
-    def run_full_preflight_audit(self, project: BookProject, cover_view: Optional[Any] = None) -> List[Issue]:
+    def run_full_preflight_audit(self, project: BookProject, cover_design: Optional[Dict[str, Any]] = None) -> List[Issue]:
         """
         Runs the complete suite of validations against a BookProject.
         """
@@ -329,11 +329,13 @@ class KDPValidator(IComplianceService):
             if img_issue:
                 issues.append(img_issue)
                 
-        # 7. Cover dimension verification (if cover view is provided)
-        if cover_view:
+        # 7. Cover dimension verification (if cover data is provided)
+        if cover_design:
+            # We assume cover_design contains a "dims" dict if saved, or directly the dimensions if from profile
+            dims = cover_design.get("dims", {})
             cover_data = {
-                "full_width_px": getattr(cover_view, "dims", {}).get("full_width_px"),
-                "full_height_px": getattr(cover_view, "dims", {}).get("full_height_px"),
+                "full_width_px": dims.get("full_width_px"),
+                "full_height_px": dims.get("full_height_px"),
             }
             issues.extend(self.validate_cover_dimensions(
                 cover_data, 

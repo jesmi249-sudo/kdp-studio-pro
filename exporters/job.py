@@ -18,11 +18,11 @@ class ExportJob(Task):
     flushes recovery checkpoints, and processes PDF/raster/vector layouts.
     """
     
-    def __init__(self, project: BookProject, profile: ExportProfile, cover_view: Optional[Any] = None, priority: int = 10) -> None:
+    def __init__(self, project: BookProject, profile: ExportProfile, cover_design: Optional[dict] = None, priority: int = 10) -> None:
         super().__init__(priority=priority)
         self.project = project
         self.profile = profile
-        self.cover_view = cover_view
+        self.cover_design = cover_design
         self.event_bus = EventBus()
         self.validator = KDPValidator()
         self.export_engine = ExportEngine()
@@ -55,7 +55,7 @@ class ExportJob(Task):
             if token.is_cancelled():
                 raise RuntimeError("Export task cancelled.")
                 
-            issues = self.validator.run_full_preflight_audit(self.project, self.cover_view)
+            issues = self.validator.run_full_preflight_audit(self.project, self.cover_design)
             
             # Check for ERROR/CRITICAL issues
             errors = [i for i in issues if i.severity in ("ERROR", "CRITICAL")]

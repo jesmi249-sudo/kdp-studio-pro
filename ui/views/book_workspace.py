@@ -32,6 +32,7 @@ class BookWorkspaceView(ctk.CTkFrame):
             "Images",
             "Layout",
             "Preview",
+            "Cover",
             "KDP Check",
             "Export"
         ]
@@ -111,7 +112,7 @@ class BookWorkspaceView(ctk.CTkFrame):
 
     def _build_step_frames(self):
         # Initialize empty frames for each step
-        for i in range(1, 9):
+        for i in range(1, len(self.steps) + 1):
             frame = ctk.CTkFrame(self.main_area, fg_color="transparent")
             frame.grid_rowconfigure(1, weight=1)
             frame.grid_columnconfigure(0, weight=1)
@@ -131,30 +132,53 @@ class BookWorkspaceView(ctk.CTkFrame):
         form = ctk.CTkFrame(content, fg_color=Colors.BG_CARD)
         form.pack(fill="x", pady=10, padx=10)
         
-        fields = ["Project Name", "Book Type", "Trim Size", "Page Count", "Bleed"]
-        self.setup_entries = {}
-        for i, field in enumerate(fields):
-            ctk.CTkLabel(form, text=field, font=Fonts.body_bold()).grid(row=i, column=0, padx=20, pady=15, sticky="e")
-            entry = ctk.CTkEntry(form, width=300)
-            entry.grid(row=i, column=1, padx=20, pady=15, sticky="w")
+        def save_setup_change(*args):
+            proj = self.engine.get_active_project()
+            proj.name = name_var.get()
+            proj.book_type = type_var.get()
+            try:
+                proj.settings["page_count"] = int(count_var.get())
+            except ValueError:
+                pass
             
-            key = field.lower().replace(" ", "_")
-            val = ""
-            if key == "project_name":
-                val = self.project_name
-            elif key == "book_type":
-                val = self.engine.get_active_project().book_type
-            elif key == "page_count":
-                val = str(self.engine.get_active_project().settings.get("page_count", 0))
-            elif key == "trim_size":
-                w = self.engine.get_active_project().settings.get("trim_width_in", 8.5)
-                h = self.engine.get_active_project().settings.get("trim_height_in", 11.0)
-                val = f"{w} x {h}"
-            elif key == "bleed":
-                val = "Yes" if self.engine.get_active_project().settings.get("has_bleed", False) else "No"
+            trim_str = size_var.get()
+            if "x" in trim_str:
+                w, h = map(float, trim_str.split("x"))
+                proj.settings["trim_width_in"] = w
+                proj.settings["trim_height_in"] = h
                 
-            entry.insert(0, val)
-            entry.configure(state="disabled") # Setup is read-only in this phase for simplicity
+            proj.settings["has_bleed"] = (bleed_var.get() == "Yes")
+            proj.save_to_disk()
+
+        name_var = ctk.StringVar(value=self.project_name)
+        type_var = ctk.StringVar(value=self.engine.get_active_project().book_type)
+        count_var = ctk.StringVar(value=str(self.engine.get_active_project().settings.get("page_count", 0)))
+        w = self.engine.get_active_project().settings.get("trim_width_in", 8.5)
+        h = self.engine.get_active_project().settings.get("trim_height_in", 11.0)
+        size_var = ctk.StringVar(value=f"{w} x {h}")
+        bleed_var = ctk.StringVar(value="Yes" if self.engine.get_active_project().settings.get("has_bleed", False) else "No")
+
+        fields = [
+            ("Project Name", name_var, "entry", None),
+            ("Book Type", type_var, "menu", ["Storybook", "Coloring Book"]),
+            ("Trim Size", size_var, "menu", ["8.5 x 11", "8 x 10", "6 x 9", "A4", "A5"]),
+            ("Page Count", count_var, "entry", None),
+            ("Bleed", bleed_var, "menu", ["Yes", "No"])
+        ]
+        
+        self.setup_entries = {}
+        for i, (label_text, var, f_type, options) in enumerate(fields):
+            ctk.CTkLabel(form, text=label_text, font=Fonts.body_bold()).grid(row=i, column=0, padx=20, pady=15, sticky="e")
+            
+            if f_type == "entry":
+                entry = ctk.CTkEntry(form, width=300, textvariable=var)
+                entry.grid(row=i, column=1, padx=20, pady=15, sticky="w")
+                entry.bind("<KeyRelease>", save_setup_change)
+                self.setup_entries[label_text] = entry
+            elif f_type == "menu":
+                menu = ctk.CTkOptionMenu(form, width=300, values=options, variable=var, command=save_setup_change)
+                menu.grid(row=i, column=1, padx=20, pady=15, sticky="w")
+                self.setup_entries[label_text] = menu
             
     def _build_planner_tab(self):
         f = self.step_frames[2]
@@ -220,20 +244,13 @@ class BookWorkspaceView(ctk.CTkFrame):
         project.save_to_disk()
         self._display_ai_plan(spec.model_dump())
         
-        # Also sync to storybook_data so Content/Images tab can use it
-        pages_data = []
-        for p in spec.pages:
-            p_dict = {"layout": p.layout_type, "text": p.text_content or ""}
-            if p.image_prompt:
-                p_dict["image_prompt"] = p.image_prompt
-                p_dict["image_reference"] = {"image_prompt": p.image_prompt, "status": "pending"}
-                p_dict["image_path"] = ""
-            pages_data.append(p_dict)
-            
-        project.custom_settings["storybook_data"] = {
-            "global_settings": {"font_family": "Georgia.ttf", "font_size": 18.0},
-            "pages": pages_data
-        }
+        from book_builder.commands.ai_commands import ApplyBookSpecificationCommand
+        from book_builder.container import Container
+        from book_builder.interfaces.core import ICommandDispatcher
+        
+        dispatcher = Container().resolve(ICommandDispatcher)
+        cmd = ApplyBookSpecificationCommand(project, spec)
+        dispatcher.execute(cmd)
         project.save_to_disk()
         self._build_content_tab()
         self._build_images_tab()
@@ -635,8 +652,18 @@ class BookWorkspaceView(ctk.CTkFrame):
             
         ctk.CTkLabel(card, text=f"Page {idx+1}\n{status}", text_color=color, font=Fonts.small()).pack()
 
-    def _build_kdp_check_tab(self):
+    def _build_cover_tab(self):
         f = self.step_frames[7]
+        for w in f.winfo_children(): w.destroy()
+        
+        from ui.views.cover_designer import CoverDesignerView
+        self.cover_view = CoverDesignerView(f)
+        self.cover_view.pack(fill="both", expand=True)
+        
+        # We'll sync data in `go_to_step` or on activation so it dynamically pulls from project
+        
+    def _build_kdp_check_tab(self):
+        f = self.step_frames[8]
         for w in f.winfo_children(): w.destroy()
         
         header = ctk.CTkFrame(f, fg_color="transparent")
@@ -726,7 +753,7 @@ class BookWorkspaceView(ctk.CTkFrame):
                         ctk.CTkButton(issue_f, text="Check Setup", width=80, command=lambda: self.go_to_step(1)).pack(side="right")
 
     def _build_export_tab(self):
-        f = self.step_frames[8]
+        f = self.step_frames[9]
         for w in f.winfo_children(): w.destroy()
         
         from ui.views.export_center import ExportCenterView
@@ -740,6 +767,7 @@ class BookWorkspaceView(ctk.CTkFrame):
         self._build_images_tab()
         self._build_layout_tab()
         self._build_preview_tab()
+        self._build_cover_tab()
         self._build_kdp_check_tab()
         self._build_export_tab()
 
@@ -754,6 +782,18 @@ class BookWorkspaceView(ctk.CTkFrame):
         # Show target
         self.step_frames[step].grid(row=0, column=0, sticky="nsew")
         self.current_step = step
+        
+        # Auto-sync cover dimensions when entering cover tab
+        if step == 7 and hasattr(self, 'cover_view'):
+            project = self.engine.get_active_project()
+            self.cover_view.current_project_id = str(project.id)
+            w = project.settings.get("trim_width_in", 8.5)
+            h = project.settings.get("trim_height_in", 11.0)
+            self.cover_view.size_var.set(f"{w} x {h}")
+            self.cover_view.page_count.delete(0, 'end')
+            self.cover_view.page_count.insert(0, str(len(project.pages)))
+            self.cover_view.refresh_data()
+            self.cover_view._recalculate_dims()
         
         # Update Nav UI
         for i, btn in enumerate(self.nav_buttons):

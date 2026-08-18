@@ -256,11 +256,28 @@ class ExportCenterView(ctk.CTkFrame):
         # Clear panel
         for child in self.val_scroll.winfo_children():
             child.destroy()
-            
-        cover_view = self.app.views.get("Cover Designer Pro")
+        cover_design = self.project.custom_settings.get("cover_design", {})
+        
+        # Override with live embedded view if available
+        workspace = self.app.views.get("Book Workspace")
+        if workspace and hasattr(workspace, "cover_view") and workspace.cover_view:
+            cover_design = {
+                "objects": workspace.cover_view.canvas_objects,
+                "bg_color": workspace.cover_view.bg_color,
+                "dims": workspace.cover_view.dims
+            }
+        elif not cover_design:
+            # Fallback to standalone tool if it was somehow used
+            standalone_cover = self.app.views.get("Cover Designer Pro")
+            if standalone_cover:
+                cover_design = {
+                    "objects": standalone_cover.canvas_objects,
+                    "bg_color": standalone_cover.bg_color,
+                    "dims": standalone_cover.dims
+                }
         
         # Run validations
-        issues = self.validator.run_full_preflight_audit(self.project, cover_view)
+        issues = self.validator.run_full_preflight_audit(self.project, cover_design)
         
         if not issues:
             lbl = ctk.CTkLabel(self.val_scroll, text="✓ Perfect! Ready for Amazon KDP Publish.", font=Fonts.body_bold(), text_color="green")
@@ -315,14 +332,30 @@ class ExportCenterView(ctk.CTkFrame):
         self.progress_lbl.pack()
         self.cancel_btn.pack(fill="x", pady=5)
         
-        # Inject cover view objects to profile settings options for the exporter
-        cover_view = self.app.views.get("Cover Designer Pro")
-        if cover_view:
-            self.active_profile.custom_options["cover_objects"] = getattr(cover_view, "canvas_objects", [])
-            self.active_profile.custom_options["cover_bg_color"] = getattr(cover_view, "bg_color", "#FFFFFF")
+        # Resolve cover objects from DB or live view
+        cover_design = self.project.custom_settings.get("cover_design", {})
+        
+        workspace = self.app.views.get("Book Workspace")
+        if workspace and hasattr(workspace, "cover_view") and workspace.cover_view:
+            cover_design = {
+                "objects": workspace.cover_view.canvas_objects,
+                "bg_color": workspace.cover_view.bg_color,
+                "dims": workspace.cover_view.dims
+            }
+        elif not cover_design:
+            standalone_cover = self.app.views.get("Cover Designer Pro")
+            if standalone_cover:
+                cover_design = {
+                    "objects": getattr(standalone_cover, "canvas_objects", []),
+                    "bg_color": getattr(standalone_cover, "bg_color", "#FFFFFF"),
+                    "dims": getattr(standalone_cover, "dims", {})
+                }
+                
+        self.active_profile.custom_options["cover_objects"] = cover_design.get("objects", [])
+        self.active_profile.custom_options["cover_bg_color"] = cover_design.get("bg_color", "#FFFFFF")
             
         # Instantiates the job
-        job = ExportJob(self.project, self.active_profile, cover_view=cover_view)
+        job = ExportJob(self.project, self.active_profile, cover_design=cover_design)
         
         # Submit to TaskQueue
         def progress_wrp(event):
