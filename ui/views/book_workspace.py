@@ -44,6 +44,22 @@ class BookWorkspaceView(ctk.CTkFrame):
         self._build_step_frames()
         self._build_bottom_nav()
         
+    def load_project(self, project_id: int, project_name: str = "", state: dict = None):
+        """Loads a project into the workspace."""
+        if not hasattr(self, 'engine') or not self.engine:
+            self.engine = Container().resolve(IBookBuilder)
+
+        self.engine.load_project(project_id)
+        self.project_id = project_id
+        self.project_name = project_name
+        self.state = state or {}
+
+        from ui.views.book_builder import WorkspaceController
+        self.controller = WorkspaceController(self)
+
+        # We start at Setup (1)
+        self.go_to_step(1)
+
     def _build_top_nav(self):
         self.top_nav = ctk.CTkFrame(self, height=60, fg_color=Colors.BG_CARD)
         self.top_nav.grid(row=0, column=0, sticky="ew")
@@ -380,7 +396,8 @@ class BookWorkspaceView(ctk.CTkFrame):
         
         missing_indices = []
         for i, p in enumerate(project.pages):
-            if not p.image_path:
+            img_path = p.images[0].get("file_path") if p.images else None
+            if not img_path:
                 missing_indices.append(i)
                 
         if not missing_indices:
@@ -430,7 +447,6 @@ class BookWorkspaceView(ctk.CTkFrame):
                     if prompt:
                         result = ai.generate_image_prompt(prompt, "storybook_style")
                         if result.success and result.content:
-                            project.pages[idx].image_path = result.content
                             pages_data[idx]["image_path"] = result.content
                             pages_data[idx]["image_reference"]["status"] = "completed"
                             self.after(0, self.trigger_autosave)
@@ -643,11 +659,13 @@ class BookWorkspaceView(ctk.CTkFrame):
         p = project.pages[idx]
         status = "✓"
         color = "green"
-        if not p.image_path:
-            status = "⚠ Missing Image"
+        img_path = p.images[0].get("file_path") if p.images else None
+        if not img_path:
+            status = "❌ Missing Image"
             color = "orange"
-        if not p.text_content:
-            status = "⚠ Missing Text"
+        text_content = p.text_blocks[0].get("text") if p.text_blocks else None
+        if not text_content:
+            status = "❌ Missing Text"
             color = "orange"
             
         ctk.CTkLabel(card, text=f"Page {idx+1}\n{status}", text_color=color, font=Fonts.small()).pack()
@@ -787,8 +805,8 @@ class BookWorkspaceView(ctk.CTkFrame):
         if step == 7 and hasattr(self, 'cover_view'):
             project = self.engine.get_active_project()
             self.cover_view.current_project_id = str(project.id)
-            w = project.settings.get("trim_width_in", 8.5)
-            h = project.settings.get("trim_height_in", 11.0)
+            w = project.trim_width_in
+            h = project.trim_height_in
             self.cover_view.size_var.set(f"{w} x {h}")
             self.cover_view.page_count.delete(0, 'end')
             self.cover_view.page_count.insert(0, str(len(project.pages)))

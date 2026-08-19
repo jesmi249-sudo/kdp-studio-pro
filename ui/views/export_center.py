@@ -31,7 +31,7 @@ class ExportCenterView(ctk.CTkFrame):
     
     def __init__(self, master: Any, **kwargs) -> None:
         super().__init__(master, **kwargs)
-        self.app = self.master.master # KDPStudioApp root reference
+        self.app = self.winfo_toplevel() # KDPStudioApp root reference
         self.event_bus = EventBus()
         self.validator = KDPValidator()
         self.export_queue = TaskQueue(num_workers=1)

@@ -11,20 +11,20 @@ logger = get_logger(__name__)
 class KDPStudioApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        
+
         self.title("KDP Studio Pro v6.0")
         self.geometry("1400x900")
         self.minsize(1024, 768)
-        
+
         # Apply theme
         ThemeManager.apply_theme()
-        
+
         self.icon_mgr = IconManager()
         self.dispatcher = CommandDispatcher()
         self.dispatcher.set_global_handler(self) # We handle global commands like 'new'
         self.dispatcher.set_active_view(self)
-        
-        # Grid layout: 
+
+        # Grid layout:
         # Row 0: Toolbar
         # Row 1: Main Workspace (Sidebar + Content)
         # Row 2: Status Bar
@@ -32,33 +32,33 @@ class KDPStudioApp(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=0)
         self.grid_columnconfigure(0, weight=1)
-        
+
         self.views = {}
         self.current_frame = None
-        
+
         self._build_toolbar()
-        
+
         # Workspace container
         self.workspace = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         self.workspace.grid(row=1, column=0, sticky="nsew")
         self.workspace.grid_rowconfigure(0, weight=1)
         self.workspace.grid_columnconfigure(1, weight=1)
-        
+
         self._build_sidebar()
-        
+
         # Main content area
         self.main_content_frame = ctk.CTkFrame(self.workspace, corner_radius=0, fg_color="transparent")
         self.main_content_frame.grid(row=0, column=1, sticky="nsew")
         self.main_content_frame.grid_rowconfigure(0, weight=1)
         self.main_content_frame.grid_columnconfigure(0, weight=1)
-        
+
         self.wizard_bar_frame = ctk.CTkFrame(self.main_content_frame, height=60, corner_radius=0)
-        
+
         self._build_statusbar()
-        
+
         # Pre-register dashboard and load it
         self.select_frame("Dashboard")
-        
+
         # Ensure IBookBuilder is registered globally to prevent DI swallowed exceptions during recovery
         from book_builder.container import Container
         from book_builder.interfaces.core import IBookBuilder
@@ -69,12 +69,30 @@ class KDPStudioApp(ctk.CTk):
             engine = BookBuilderEngine()
             Container().register(IBookBuilder, engine)
 
+        # Ensure AI Services are registered globally
+        from book_builder.services.ai.manager import AIManager
+        from book_builder.services.credential_service import ICredentialService, KeyringCredentialService
+        from core.config import config
+        try:
+            Container().resolve(AIManager)
+        except ValueError:
+            cred_service = KeyringCredentialService()
+            ai_manager = AIManager(credential_service=cred_service)
+            ai_cfg = config.get("ai_settings", {})
+            provider = ai_cfg.get("provider", "none")
+            model = ai_cfg.get("model", "gpt-4o-mini")
+            is_enabled = ai_cfg.get("enabled", False)
+            if is_enabled:
+                ai_manager.configure(provider, model_name=model)
+            Container().register(ICredentialService, cred_service)
+            Container().register(AIManager, ai_manager)
+
 
 
     def _build_toolbar(self):
         self.toolbar = ctk.CTkFrame(self, height=50, corner_radius=0)
         self.toolbar.grid(row=0, column=0, sticky="ew")
-        
+
         buttons = [
             ("New", "new.png", "new"),
             ("Open", "open.png", "open"),
@@ -88,14 +106,14 @@ class KDPStudioApp(ctk.CTk):
             ("Settings", "settings.png", "settings"),
             ("Help", "help.png", "help")
         ]
-        
+
         for text, icon_name, cmd in buttons:
             if text == "|":
                 ctk.CTkFrame(self.toolbar, width=2, height=30, fg_color="gray").pack(side="left", padx=10, pady=10)
                 continue
-                
+
             img = self.icon_mgr.get_icon(icon_name)
-            btn = ctk.CTkButton(self.toolbar, text=text, image=img, width=60, fg_color="transparent", 
+            btn = ctk.CTkButton(self.toolbar, text=text, image=img, width=60, fg_color="transparent",
                                 text_color=("black", "white"),
                                 command=lambda c=cmd: self.dispatcher.execute(c))
             btn.pack(side="left", padx=2, pady=5)
@@ -104,14 +122,14 @@ class KDPStudioApp(ctk.CTk):
         self.sidebar_frame = ctk.CTkFrame(self.workspace, width=220, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(1, weight=1) # Push bottom items down
-        
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text=" KDP Studio Pro", font=Fonts.heading3(), 
+
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text=" KDP Studio Pro", font=Fonts.heading3(),
                                        image=self.icon_mgr.get_icon("dashboard.png"), compound="left")
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 20), sticky="w")
-        
+
         self.menu_scroll = ctk.CTkScrollableFrame(self.sidebar_frame, fg_color="transparent")
         self.menu_scroll.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
-        
+
         menu_groups = [
             ("MY BOOKS", [
                 ("Dashboard", "dashboard.png"),
@@ -126,7 +144,7 @@ class KDPStudioApp(ctk.CTk):
                 ("Legacy Studios", "metadata.png"),
             ])
         ]
-        
+
         self.nav_buttons = {}
         for group_name, items in menu_groups:
             ctk.CTkLabel(self.menu_scroll, text=group_name, font=Fonts.small(), text_color="gray").pack(anchor="w", padx=15, pady=(10, 2))
@@ -137,7 +155,7 @@ class KDPStudioApp(ctk.CTk):
                                     command=lambda n=name: self.select_frame(n))
                 btn.pack(fill="x", padx=10, pady=1)
                 self.nav_buttons[name] = btn
-            
+
         # Settings at bottom
         img = self.icon_mgr.get_icon("settings.png")
         btn = ctk.CTkButton(self.sidebar_frame, text="Settings", image=img, compound="left", anchor="w",
@@ -145,7 +163,7 @@ class KDPStudioApp(ctk.CTk):
                             command=lambda: self.select_frame("Settings"))
         btn.grid(row=2, column=0, padx=10, pady=(10, 5), sticky="ew")
         self.nav_buttons["Settings"] = btn
-        
+
         # AI Settings at bottom
         ai_btn = ctk.CTkButton(self.sidebar_frame, text="AI Settings", image=img, compound="left", anchor="w",
                             fg_color="transparent", text_color=("gray10", "gray90"), font=Fonts.body(),
@@ -156,10 +174,10 @@ class KDPStudioApp(ctk.CTk):
     def _build_statusbar(self):
         self.statusbar = ctk.CTkFrame(self, height=30, corner_radius=0)
         self.statusbar.grid(row=2, column=0, sticky="ew")
-        
+
         self.status_lbl = ctk.CTkLabel(self.statusbar, text="Ready", font=Fonts.small())
         self.status_lbl.pack(side="left", padx=10)
-        
+
         self.version_lbl = ctk.CTkLabel(self.statusbar, text="v2.0 | Theme: Dark | DB: Connected", font=Fonts.small(), text_color="gray")
         self.version_lbl.pack(side="right", padx=10)
 
@@ -167,11 +185,11 @@ class KDPStudioApp(ctk.CTk):
         """Instantiates views only when they are first clicked."""
         if name in self.views:
             return self.views[name]
-            
+
         logger.info(f"Lazy loading view: {name}")
         self.status_lbl.configure(text=f"Loading {name}...")
         self.update()
-        
+
         view = None
         if name == "Dashboard":
             from ui.views.dashboard import DashboardView
@@ -225,23 +243,12 @@ class KDPStudioApp(ctk.CTk):
             from ui.views.ai_settings_view import AISettingsView
             from book_builder.container import Container
             from book_builder.services.ai.manager import AIManager
-            from book_builder.services.credential_service import ICredentialService, KeyringCredentialService
+            from book_builder.services.credential_service import ICredentialService
             from core.config import config
-            
-            try:
-                ai_manager = Container().resolve(AIManager)
-                cred_service = Container().resolve(ICredentialService)
-            except ValueError:
-                cred_service = KeyringCredentialService()
-                ai_manager = AIManager(credential_service=cred_service)
-                ai_cfg = config.get("ai_settings", {})
-                provider = ai_cfg.get("provider", "none")
-                model = ai_cfg.get("model", "gpt-4o-mini")
-                is_enabled = ai_cfg.get("enabled", False)
-                if is_enabled:
-                    ai_manager.configure(provider, model_name=model)
-                Container().register(ICredentialService, cred_service)
-                Container().register(AIManager, ai_manager)
+
+            ai_manager = Container().resolve(AIManager)
+            cred_service = Container().resolve(ICredentialService)
+
             view = AISettingsView(self.main_content_frame, ai_manager, cred_service, config)
         elif name == "Planner Studio":
             from ui.views.planner_studio import PlannerStudioView
@@ -263,7 +270,7 @@ class KDPStudioApp(ctk.CTk):
             view = BookWorkspaceView(self.main_content_frame)
         else:
             view = ctk.CTkFrame(self.main_content_frame)
-            
+
         self.views[name] = view
         self.status_lbl.configure(text="Ready")
         return view
@@ -271,21 +278,21 @@ class KDPStudioApp(ctk.CTk):
     def select_frame(self, name):
         if self.current_frame:
             self.current_frame.grid_forget()
-            
+
         view = self._lazy_load_view(name)
         self.current_frame = view
         self.current_frame.grid(row=0, column=0, sticky="nsew")
-        
+
         # Refresh the view dynamically if it has a refresh_data method
         if hasattr(view, "refresh_data"):
             try:
                 view.refresh_data()
             except Exception as e:
                 logger.error(f"Failed to auto-refresh view '{name}': {e}")
-        
+
         # Route toolbar commands to the new view
         self.dispatcher.set_active_view(self.current_frame)
-        
+
         # Update sidebar button highlighting
         for btn_name, btn in self.nav_buttons.items():
             btn.configure(fg_color=("gray75", "gray25") if btn_name == name else "transparent")
@@ -293,7 +300,7 @@ class KDPStudioApp(ctk.CTk):
     # App-level command handlers
     def cmd_navigate(self, target):
         self.select_frame(target)
-        
+
     def cmd_settings(self):
         self.select_frame("Settings")
 
@@ -354,7 +361,7 @@ class KDPStudioApp(ctk.CTk):
                 master=self
             )
             dlg.geometry("500x320")
-            
+
             import customtkinter as ctk
             btn = ctk.CTkButton(dlg.action_frame, text="Close", command=dlg.destroy)
             btn.pack(side="right")
@@ -364,13 +371,13 @@ class KDPStudioApp(ctk.CTk):
     def open_project(self, project: Any):
         """
         Centralized routing to open a selected project.
-        
+
         Args:
             project (Any): The project row dictionary or BookProject instance.
         """
         import json
         from tkinter import messagebox
-        
+
         # Check if project is a BookProject object
         if hasattr(project, "book_type") and hasattr(project, "name"):
             from book_builder.serializer import ProjectSerializer
@@ -381,7 +388,7 @@ class KDPStudioApp(ctk.CTk):
                 p_type = "activity"
             elif "Coloring" in project.book_type:
                 p_type = "coloring"
-                
+
             project_dict = {
                 "id": project.id,
                 "name": project.name,
@@ -391,17 +398,17 @@ class KDPStudioApp(ctk.CTk):
         else:
             # Safe dict conversion for sqlite3.Row rows
             project_dict = dict(project) if not isinstance(project, dict) else project
-        
+
         p_id = project_dict.get('id')
         p_name = project_dict.get('name')
         p_type = project_dict.get('project_type')
         p_data = project_dict.get('data')
-        
+
         logger.info(f"Centralized load project: id={p_id}, name='{p_name}', type='{p_type}'")
-        
+
         try:
             state = json.loads(p_data) if p_data else {}
-            
+
             if p_type == 'cover':
                 self.select_frame('Cover Designer Pro')
                 view = self.views.get('Cover Designer Pro')
@@ -415,7 +422,7 @@ class KDPStudioApp(ctk.CTk):
             # Always route standard projects to Book Workspace
             if p_type and p_type.lower() in ['book', 'wizard', 'notebook', 'journal', 'planner', 'storybook', 'story book', 'activity book', 'activity', 'coloring book', 'coloring']:
                 target_studio = "Book Workspace"
-            
+
             if target_studio:
                 self.select_frame(target_studio)
                 view = self.views.get(target_studio)
